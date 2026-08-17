@@ -7,9 +7,10 @@ load_dotenv()
 SHOP = os.getenv("SHOPIFY_SHOP")
 CLIENT_ID = os.getenv("SHOPIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SHOPIFY_CLIENT_SECRET")
+API_VERSION = os.getenv("API_VERSION", "2026-07")
 
 GRAPHQL_URL = (
-    f"https://{SHOP}.myshopify.com/admin/api/2026-07/graphql.json"
+    f"https://{SHOP}.myshopify.com/admin/api/{API_VERSION}/graphql.json"
 )
 
 
