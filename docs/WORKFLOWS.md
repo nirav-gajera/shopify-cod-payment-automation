@@ -6,26 +6,31 @@ The following sequence diagram illustrates the workflow when running the main sc
 
 ```mermaid
 sequenceDiagram
-    participant User as Reconciler / Cron
-    participant Script as mark_as_paid.py
-    participant Excel as openpyxl Parser
+    participant User as User
+    participant WebUI as Web Interface (index.html)
+    participant Flask as Flask API (app.py)
     participant Shopify as Shopify GraphQL Admin API
 
-    User->>Script: Run script without arguments
-    Script->>Shopify: POST /admin/oauth/access_token
-    Shopify-->>Script: Return Access Token
-    Script->>Excel: Read all .xlsx files in orders/
-    Excel-->>Script: Return list of Order IDs
-    Script->>Script: Deduplicate Order IDs
+    User->>WebUI: Drag and drop Excel file
+    WebUI->>Flask: POST /api/upload
+    Flask-->>WebUI: Return session ID & file preview data
+    User->>WebUI: Click "Process"
+    WebUI->>Flask: POST /api/process
+    Flask->>Flask: Start Background Thread
+    WebUI->>Flask: GET /api/stream/<session_id> (SSE Connect)
+    Flask->>Shopify: POST /admin/oauth/access_token
+    Shopify-->>Flask: Return Access Token
     loop For each unique Order ID
-        Script->>Shopify: Query: FindOrder (name:#ID)
-        Shopify-->>Script: Return order details (GID, status)
+        Flask->>Shopify: Query: FindOrder (name:#ID)
+        Shopify-->>Flask: Return order details (GID, status)
         alt status != PAID
-            Script->>Shopify: Mutation: orderMarkAsPaid (GID)
-            Shopify-->>Script: Return success/errors
+            Flask->>Shopify: Mutation: orderMarkAsPaid (GID)
+            Shopify-->>Flask: Return success/errors
         else status == PAID
-            Script->>Script: Log "already_paid" and skip
+            Flask->>Flask: Log "already_paid" and skip
         end
+        Flask-->>WebUI: SSE data (log update, summary counts)
     end
-    Script-->>User: Output summary of all processed orders
+    Flask-->>WebUI: SSE data (done)
+    WebUI-->>User: Visual update indicating completion
 ```

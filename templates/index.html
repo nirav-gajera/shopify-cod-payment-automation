@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shopify COD · Mark as Paid</title>
+  <meta name="description" content="Upload COD invoice sheets and automatically mark delivered orders as paid in Shopify." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #09090f;
+      --surface:      #111118;
+      --surface2:     #18181f;
+      --surface3:     #1e1e28;
+      --border:       rgba(139,92,246,.12);
+      --border-h:     rgba(139,92,246,.4);
+      --accent:       #8b5cf6;
+      --accent-dim:   rgba(139,92,246,.13);
+      --success:      #10b981;
+      --success-dim:  rgba(16,185,129,.11);
+      --warning:      #f59e0b;
+      --warning-dim:  rgba(245,158,11,.11);
+      --error:        #ef4444;
+      --error-dim:    rgba(239,68,68,.11);
+      --muted:        #475569;
+      --text:         #e2e8f0;
+      --text-2:       #94a3b8;
+      --text-3:       #64748b;
+      --r:            14px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 36px 20px 80px;
+      background-image:
+        radial-gradient(ellipse 90% 40% at 50% -5%,
+          rgba(139,92,246,.09) 0%, transparent 65%);
+    }
+
+    .page { max-width: 880px; margin: 0 auto; }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    .hdr {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 44px;
+    }
+
+    .hdr-logo {
+      width: 46px; height: 46px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border-radius: 13px;
+      display: grid; place-items: center;
+      box-shadow: 0 0 24px rgba(139,92,246,.35);
+      flex-shrink: 0;
+    }
+    .hdr-logo svg { width: 22px; height: 22px; color: #fff; }
+
+    .hdr-text h1 {
+      font-size: 1.2rem; font-weight: 700;
+      letter-spacing: -.015em; color: var(--text);
+    }
+    .hdr-text p { font-size: .78rem; color: var(--text-3); margin-top: 3px; }
+
+    #status-badge {
+      margin-left: auto;
+      padding: 5px 13px;
+      border-radius: 20px;
+      font-size: .7rem; font-weight: 600;
+      letter-spacing: .06em; text-transform: uppercase;
+      transition: all .3s;
+    }
+    .b-idle       { background: var(--surface2); color: var(--text-3); }
+    .b-ready      { background: rgba(139,92,246,.15); color: #a78bfa; }
+    .b-processing { background: rgba(245,158,11,.15); color: #fbbf24; }
+    .b-done       { background: var(--success-dim); color: #34d399; }
+
+    /* ── Cards ──────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 28px;
+      margin-bottom: 18px;
+      transition: border-color .25s;
+    }
+
+    .card-hdr {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 22px;
+    }
+    .card-hdr h2 { font-size: .95rem; font-weight: 600; }
+
+    .step-num {
+      width: 25px; height: 25px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: .7rem; font-weight: 700;
+      display: grid; place-items: center;
+      flex-shrink: 0;
+    }
+
+    .count-pill {
+      margin-left: auto;
+      background: var(--accent-dim);
+      color: #a78bfa;
+      padding: 3px 11px;
+      border-radius: 20px;
+      font-size: .72rem; font-weight: 600;
+    }
+
+    /* ── Upload zone ────────────────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed rgba(139,92,246,.22);
+      border-radius: 12px;
+      padding: 52px 24px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: all .25s;
+    }
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .upload-zone input[type=file] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+
+    .uz-icon {
+      width: 56px; height: 56px;
+      margin: 0 auto 18px;
+      background: var(--surface2);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      transition: transform .25s;
+    }
+    .upload-zone:hover .uz-icon { transform: translateY(-4px); }
+    .uz-icon svg { width: 26px; height: 26px; color: var(--accent); }
+
+    .uz-title { font-size: .95rem; font-weight: 500; margin-bottom: 7px; }
+    .uz-sub   { font-size: .79rem; color: var(--text-3); }
+    .uz-sub em { color: var(--accent); font-style: normal; }
+
+    /* file selected badge */
+    .file-badge {
+      display: none;
+      align-items: center; gap: 12px;
+      padding: 13px 17px;
+      background: var(--success-dim);
+      border: 1px solid rgba(16,185,129,.18);
+      border-radius: 10px;
+      margin-top: 16px;
+    }
+    .file-badge.show { display: flex; }
+    .file-badge svg  { width: 20px; height: 20px; color: var(--success); flex-shrink: 0; }
+    .fb-name {
+      font-size: .83rem; font-weight: 500; color: var(--success);
+      flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .fb-size { font-size: .72rem; color: var(--text-3); }
+
+    /* upload error */
+    .upload-err {
+      display: none;
+      align-items: center; gap: 10px;
+      padding: 12px 16px;
+      background: var(--error-dim);
+      border: 1px solid rgba(239,68,68,.22);
+      border-radius: 10px;
+      color: #f87171;
+      font-size: .8rem;
+      margin-top: 14px;
+    }
+    .upload-err.show { display: flex; }
+    .upload-err svg  { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── Table preview ──────────────────────────────────────────────────── */
+    .table-wrap {
+      overflow: auto;
+      max-height: 310px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .79rem; }
+
+    thead th {
+      position: sticky; top: 0;
+      background: var(--surface2);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600; font-size: .7rem;
+      text-transform: uppercase; letter-spacing: .05em;
+      color: var(--text-3);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    thead th.hl { color: #a78bfa; background: rgba(139,92,246,.1); }
+
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.025); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.018); }
+    tbody td { padding: 9px 14px; color: var(--text); white-space: nowrap; }
+    tbody td.hl { color: #a78bfa; font-weight: 600; background: rgba(139,92,246,.05); }
+
+    .more-note {
+      font-size: .73rem; color: var(--text-3);
+      margin-bottom: 16px; display: none;
+    }
+
+    /* ── File Items ── */
+    .file-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+      padding: 16px;
+      transition: all 0.25s;
+    }
+    .file-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .file-item-title {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .file-item-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .file-item-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .fib-pending { background: rgba(255,255,255,0.05); color: var(--text-3); }
+    .fib-processing { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .fib-success { background: var(--success-dim); color: #34d399; }
+    .fib-error { background: var(--error-dim); color: #f87171; }
+    
+    .file-item-preview {
+      margin-top: 14px;
+      display: none;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 12px;
+    }
+    .file-item-preview.show {
+      display: block;
+    }
+    
+    .file-item-preview-table-wrap {
+      overflow-x: auto;
+      max-height: 200px;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 6px;
+    }
+    
+    .toggle-preview-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: inherit;
+    }
+    .toggle-preview-btn:hover {
+      text-decoration: underline;
+      color: #a78bfa;
+    }
+
+    .remove-file-btn {
+      background: none;
+      border: none;
+      color: var(--text-3);
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: inherit;
+      transition: color 0.2s;
+    }
+    .remove-file-btn:hover {
+      text-decoration: underline;
+      color: var(--error);
+    }
+
+
+    /* ── Process button ─────────────────────────────────────────────────── */
+    .btn-process {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: #fff; border: none; border-radius: 10px;
+      font-size: .95rem; font-weight: 600; font-family: inherit;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      transition: all .22s;
+      box-shadow: 0 4px 18px rgba(139,92,246,.25);
+    }
+    .btn-process:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(139,92,246,.42);
+    }
+    .btn-process:active:not(:disabled) { transform: translateY(0); }
+    .btn-process:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+    .btn-process svg { width: 18px; height: 18px; }
+
+    /* ── Log console ────────────────────────────────────────────────────── */
+    .log-console {
+      background: #06060b;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+      max-height: 420px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .775rem;
+      line-height: 1.85;
+      scroll-behavior: smooth;
+    }
+
+    .log-line { display: flex; gap: 10px; }
+    .log-t { color: #253047; flex-shrink: 0; user-select: none; }
+    .log-m { flex: 1; }
+
+    .log-info    .log-m { color: #7c8da6; }
+    .log-success .log-m { color: #34d399; }
+    .log-warning .log-m { color: #fbbf24; }
+    .log-error   .log-m { color: #f87171; }
+    .log-muted   .log-m { color: #3d4f67; }
+    .log-sep { border-top: 1px solid rgba(255,255,255,.05); margin: 6px 0; }
+
+    /* ── Summary cards ──────────────────────────────────────────────────── */
+    .summary-bar {
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .summary-bar.show { display: grid; }
+
+    .s-stat {
+      background: var(--surface2);
+      border-radius: 11px;
+      padding: 16px 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .s-val {
+      font-size: 1.7rem; font-weight: 700;
+      line-height: 1; margin-bottom: 5px;
+    }
+    .s-label { font-size: .68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+
+    .s-paid    .s-val { color: var(--success); }
+    .s-already .s-val { color: var(--accent); }
+    .s-nf      .s-val { color: var(--warning); }
+    .s-err     .s-val { color: var(--error); }
+
+    /* ── Pulse / spinner ────────────────────────────────────────────────── */
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 0 rgba(16,185,129,.45);
+      animation: pulse 1.4s infinite;
+      margin-left: auto;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(16,185,129,.45); }
+      70%  { box-shadow: 0 0 0 9px rgba(16,185,129,0); }
+      100% { box-shadow: 0 0 0 0   rgba(16,185,129,0); }
+    }
+
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2.5px solid rgba(255,255,255,.28);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      display: none;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+
+    /* ── Scrollbar ──────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(139,92,246,.25); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,.45); }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header class="hdr">
+    <div class="hdr-logo">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0
+             014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138
+             3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0
+             00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806
+             3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0
+             01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438
+             3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+      </svg>
+    </div>
+    <div class="hdr-text">
+      <h1>Shopify COD &middot; Mark as Paid</h1>
+      <p>Upload your logistics invoice sheet to mark delivered COD orders as paid</p>
+    </div>
+    <span id="status-badge" class="b-idle">Idle</span>
+  </header>
+
+  <!-- ── Step 1: Upload ──────────────────────────────────────────────────── -->
+  <div class="card" id="card-upload">
+    <div class="card-hdr">
+      <div class="step-num">1</div>
+      <h2>Upload Invoice Sheet</h2>
+    </div>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept=".xlsx" multiple />
+      <div class="uz-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011
+               9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+      </div>
+      <p class="uz-title">Drop your invoices <em>.xlsx</em> here</p>
+      <p class="uz-sub">or <em>click to browse</em> &nbsp;·&nbsp; select multiple &nbsp;·&nbsp; must have an <strong>OrderId</strong> column</p>
+    </div>
+
+    <div class="file-badge" id="file-badge">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0
+             01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <span class="fb-name" id="fb-name"></span>
+      <span class="fb-size" id="fb-size"></span>
+    </div>
+
+    <div class="upload-err" id="upload-err">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span id="upload-err-text"></span>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Preview + Process ─────────────────────────────────────── -->
+  <div class="card hidden" id="card-preview">
+    <div class="card-hdr">
+      <div class="step-num">2</div>
+      <h2>Review Sheets</h2>
+      <span class="count-pill" id="count-pill">0 orders total</span>
+    </div>
+
+    <div id="files-list-container">
+      <!-- File items will be inserted here dynamically -->
+    </div>
+
+    <button class="btn-process" id="btn-process" disabled style="margin-top: 20px;">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0
+             001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <div class="spinner" id="btn-spin"></div>
+      <span id="btn-label">Process Orders</span>
+    </button>
+  </div>
+
+
+  <!-- ── Step 3: Live Log ───────────────────────────────────────────────── -->
+  <div class="card hidden" id="card-log">
+    <div class="card-hdr">
+      <div class="step-num">3</div>
+      <h2>Live Processing Log</h2>
+      <div class="pulse-dot hidden" id="pulse"></div>
+    </div>
+
+    <div class="log-console" id="log-console"></div>
+
+    <div class="summary-bar" id="summary-bar">
+      <div class="s-stat s-paid">
+        <div class="s-val" id="s-paid">0</div>
+        <div class="s-label">Marked Paid</div>
+      </div>
+      <div class="s-stat s-already">
+        <div class="s-val" id="s-already">0</div>
+        <div class="s-label">Already Paid</div>
+      </div>
+      <div class="s-stat s-nf">
+        <div class="s-val" id="s-nf">0</div>
+        <div class="s-label">Not Found</div>
+      </div>
+      <div class="s-stat s-err">
+        <div class="s-val" id="s-err">0</div>
+        <div class="s-label">Errors</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  let uploadedFiles = []; // Array of { session_id, filename, headers, rows, total_rows, order_count, order_id_col }
+
+  // ── Upload ──────────────────────────────────────────────────────────────
+
+  const zone = $('upload-zone');
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  });
+  $('file-input').addEventListener('change', e => {
+    if (e.target.files.length) handleFiles(e.target.files);
+  });
+
+  function handleFiles(files) {
+    // Reset
+    $('upload-err').classList.remove('show');
+    $('card-preview').classList.add('hidden');
+    $('card-log').classList.add('hidden');
+    $('btn-process').disabled = true;
+    uploadedFiles = [];
+
+    let totalSize = 0;
+    const names = [];
+    for (let i = 0; i < files.length; i++) {
+      if (!files[i].name.toLowerCase().endsWith('.xlsx')) {
+        return showErr(`File "${files[i].name}" is not supported. Only .xlsx files are allowed.`);
+      }
+      totalSize += files[i].size;
+      names.push(files[i].name);
+    }
+
+    $('file-badge').classList.add('show');
+    $('fb-name').textContent = files.length === 1 ? names[0] : `${files.length} files selected`;
+    $('fb-size').textContent = fmtBytes(totalSize);
+    setStatus('Uploading…', 'b-idle');
+
+    const fd = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      fd.append('file', files[i]);
+    }
+
+    fetch('/api/upload', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) { showErr(d.error); return; }
+        uploadedFiles = Array.isArray(d) ? d : [d];
+        renderPreview();
+        setStatus('Ready', 'b-ready');
+        $('btn-process').disabled = false;
+      })
+      .catch((err) => showErr(err.message || 'Upload failed. Make sure the server is running.'));
+  }
+
+  function showErr(msg) {
+    $('upload-err-text').textContent = msg;
+    $('upload-err').classList.add('show');
+    $('file-badge').classList.remove('show');
+    setStatus('Error', 'b-idle');
+  }
+
+  function fmtBytes(b) {
+    if (b < 1024)    return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+  }
+
+  // ── Preview ─────────────────────────────────────────────────────────────
+
+  function renderPreview() {
+    const totalOrders = uploadedFiles.reduce((sum, f) => sum + f.order_count, 0);
+    $('count-pill').textContent = `${totalOrders} order${totalOrders !== 1 ? 's' : ''} total`;
+
+    const container = $('files-list-container');
+    container.innerHTML = '';
+
+    uploadedFiles.forEach((file) => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      item.id = `file-item-${file.session_id}`;
+
+      // Build Headers row
+      let headersHtml = '';
+      file.headers.forEach((h, i) => {
+        headersHtml += `<th class="${i === file.order_id_col ? 'hl' : ''}">${esc(h)}</th>`;
+      });
+
+      // Build Rows
+      let rowsHtml = '';
+      file.rows.forEach(row => {
+        rowsHtml += '<tr>';
+        row.forEach((v, i) => {
+          rowsHtml += `<td class="${i === file.order_id_col ? 'hl' : ''}">${esc(v)}</td>`;
+        });
+        rowsHtml += '</tr>';
+      });
+
+      const moreNoteText = file.total_rows > 50 ? `<p class="more-note" style="display:block; margin-top: 10px;">Showing first 50 of ${file.total_rows} rows.</p>` : '';
+
+      item.innerHTML = `
+        <div class="file-item-header">
+          <div class="file-item-title">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: var(--text-3);">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span>${esc(file.filename)}</span>
+            <span style="font-size: 0.72rem; color: var(--text-3);">(${file.order_count} orders)</span>
+          </div>
+          <div class="file-item-meta">
+            <span class="file-item-badge fib-pending" id="badge-${file.session_id}">Pending</span>
+            <button class="toggle-preview-btn" onclick="togglePreview('${file.session_id}')">
+              <span>Preview</span>
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px; transition: transform 0.2s;" id="arrow-${file.session_id}">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <button class="remove-file-btn" onclick="removeFile('${file.session_id}')" title="Remove file">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+              <span>Remove</span>
+            </button>
+          </div>
+        </div>
+        <div class="file-item-preview" id="preview-${file.session_id}">
+          <div class="file-item-preview-table-wrap">
+            <table>
+              <thead><tr>${headersHtml}</tr></thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+          ${moreNoteText}
+        </div>
+      `;
+
+      container.appendChild(item);
+    });
+
+    $('btn-label').textContent = `Process All ${totalOrders} Orders`;
+    $('card-preview').classList.remove('hidden');
+  }
+
+  function togglePreview(sessionId) {
+    const preview = $(`preview-${sessionId}`);
+    const arrow = $(`arrow-${sessionId}`);
+    if (preview && arrow) {
+      const isShowing = preview.classList.toggle('show');
+      arrow.style.transform = isShowing ? 'rotate(180deg)' : '';
+    }
+  }
+
+  function removeFile(sessionId) {
+    fetch('/api/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId })
+    }).catch(err => console.error("Error removing session cache:", err));
+
+    uploadedFiles = uploadedFiles.filter(f => f.session_id !== sessionId);
+
+    if (uploadedFiles.length === 0) {
+      $('card-preview').classList.add('hidden');
+      $('file-badge').classList.remove('show');
+      $('btn-process').disabled = true;
+      setStatus('Idle', 'b-idle');
+    } else {
+      renderPreview();
+    }
+  }
+
+
+  // ── Process ─────────────────────────────────────────────────────────────
+
+  let globalTotals = { success: 0, already_paid: 0, not_found: 0, error: 0 };
+
+  $('btn-process').addEventListener('click', async () => {
+    if (!uploadedFiles.length) return;
+
+    $('btn-process').disabled  = true;
+    $('btn-spin').style.display = 'block';
+    $('btn-label').textContent  = 'Processing…';
+    $('card-log').classList.remove('hidden');
+    $('log-console').innerHTML  = '';
+    $('summary-bar').classList.remove('show');
+    $('pulse').classList.remove('hidden');
+    setStatus('Processing', 'b-processing');
+
+    globalTotals = { success: 0, already_paid: 0, not_found: 0, error: 0 };
+    updateSummaryUI();
+
+    for (let i = 0; i < uploadedFiles.length; i++) {
+      const file = uploadedFiles[i];
+      updateFileBadge(file.session_id, 'processing', 'Processing');
+      appendLog('info', `>>> STARTING FILE: ${file.filename} (${i + 1}/${uploadedFiles.length}) <<<`);
+      appendSep();
+
+      try {
+        await processFileSession(file.session_id);
+        updateFileBadge(file.session_id, 'success', 'Done');
+      } catch (err) {
+        appendLog('error', `Error processing file ${file.filename}: ${err.message}`);
+        updateFileBadge(file.session_id, 'error', 'Error');
+      }
+      appendSep();
+    }
+
+    $('btn-spin').style.display = 'none';
+    $('btn-label').textContent  = 'Done ✓';
+    $('pulse').classList.add('hidden');
+    setStatus('Done', 'b-done');
+  });
+
+  function updateFileBadge(sessionId, status, label) {
+    const b = $(`badge-${sessionId}`);
+    if (b) {
+      b.className = `file-item-badge fib-${status}`;
+      b.textContent = label;
+    }
+  }
+
+  function processFileSession(sessionId) {
+    return new Promise((resolve, reject) => {
+      const es = new EventSource(`/api/stream/${sessionId}`);
+
+      fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      }).catch(err => {
+        es.close();
+        reject(err);
+      });
+
+      es.onmessage = ev => {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'ping')      return;
+        if (msg.type === 'log')       appendLog(msg.level, msg.message);
+        if (msg.type === 'separator') appendSep();
+        if (msg.type === 'summary') {
+          globalTotals.success += msg.success;
+          globalTotals.already_paid += msg.already_paid;
+          globalTotals.not_found += msg.not_found;
+          globalTotals.error += msg.error;
+          updateSummaryUI();
+        }
+        if (msg.type === 'error')     appendLog('error', msg.message);
+        if (msg.type === 'done') {
+          es.close();
+          resolve();
+        }
+      };
+
+      es.onerror = () => {
+        es.close();
+        reject(new Error('SSE connection lost.'));
+      };
+    });
+  }
+
+  function updateSummaryUI() {
+    $('s-paid').textContent   = globalTotals.success;
+    $('s-already').textContent = globalTotals.already_paid;
+    $('s-nf').textContent      = globalTotals.not_found;
+    $('s-err').textContent     = globalTotals.error;
+    $('summary-bar').classList.add('show');
+  }
+
+  // ── Log helpers ─────────────────────────────────────────────────────────
+
+  function appendLog(level, message) {
+    const con  = $('log-console');
+    const line = document.createElement('div');
+    line.className = `log-line log-${level}`;
+    const t = new Date().toTimeString().slice(0, 8);
+    line.innerHTML =
+      `<span class="log-t">${t}</span>` +
+      `<span class="log-m">${esc(message)}</span>`;
+    con.appendChild(line);
+    con.scrollTop = con.scrollHeight;
+  }
+
+  function appendSep() {
+    const con = $('log-console');
+    const d   = document.createElement('div');
+    d.className = 'log-sep';
+    con.appendChild(d);
+    con.scrollTop = con.scrollHeight;
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Status badge ────────────────────────────────────────────────────────
+
+  function setStatus(label, cls) {
+    const b = $('status-badge');
+    b.textContent = label;
+    b.className   = cls;
+  }
+
+
+
+</script>
+</body>
+</html>
