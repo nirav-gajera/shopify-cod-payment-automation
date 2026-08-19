@@ -28,7 +28,7 @@ graph TD
 - **Python Style:** Follow PEP 8 guidelines. Use clean snake_case for functions and variables. UPPER_CASE for global constants.
 - **Dependency Management:** Packages should be listed in instructions/dependencies. Use a virtual environment.
 - **Error Handling:** Always check for `userErrors` returned in GraphQL payloads, not just HTTP status codes.
-- **Environment Variables:** All secrets and configurations (`SHOPIFY_SHOP`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`) must be kept in `.env` and never committed.
+- **Environment Variables:** All secrets and configurations (`SHOPIFY_SHOP`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`, `API_VERSION`) must be kept in `.env` and never committed.
 
 ## Project Structure Tree
 ```

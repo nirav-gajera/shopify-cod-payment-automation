@@ -21,20 +21,22 @@ This was **slow, repetitive, and error-prone** — a process that could take hou
 
 ### After This Automation
 
-Run a single Python command → all delivered COD orders from the invoice files are automatically found and marked as paid in Shopify via the **GraphQL Admin API**. What used to take hours now takes minutes.
+Run the local web app or a single Python command → upload your invoice files via the interactive dashboard, and all delivered COD orders are automatically found and marked as paid in Shopify via the **GraphQL Admin API**. What used to take hours now takes minutes.
 
 ---
 
 ## Project Structure
 
-```
+```text
 shopify-cod-mark-paid/
 ├── .env                  # Your Shopify credentials (never commit this)
+├── app.py                # Main Flask web app and API endpoints
 ├── find_order.py         # Utility: look up a Shopify order by number (debugging)
-├── mark_as_paid.py       # Main script: reads Excel files → marks orders as paid
-└── orders/               # Drop your logistics invoice .xlsx files here
+├── mark_as_paid.py       # Legacy CLI automation script
+├── templates/
+│   └── index.html        # Interactive drag-and-drop web dashboard
+└── orders/               # Drop your logistics invoice .xlsx files here (for CLI)
     ├── invoice_batch_1.xlsx
-    ├── invoice_batch_2.xlsx
     └── ...
 ```
 
@@ -62,7 +64,7 @@ shopify-cod-mark-paid/
 ### Step 2 — Install Dependencies
 
 ```bash
-pip install requests python-dotenv openpyxl
+pip install Flask requests python-dotenv openpyxl
 ```
 
 ### Step 3 — Configure `.env`
@@ -73,13 +75,14 @@ Create a `.env` file in the project root:
 SHOPIFY_SHOP=your-store-subdomain
 SHOPIFY_CLIENT_ID=your_client_id
 SHOPIFY_CLIENT_SECRET=your_client_secret
+API_VERSION=2026-07
 ```
 
 > `SHOPIFY_SHOP` is the subdomain only — e.g. for `mystore.myshopify.com`, use `mystore`.
 
 ### Step 4 — Prepare Your Excel Files
 
-Drop your logistics invoice `.xlsx` files into the `orders/` folder.
+You can upload your logistics invoice `.xlsx` files directly via the **Web Dashboard**, or drop them into the `orders/` folder if using the CLI.
 
 The script looks for a column named **`OrderId`** in each sheet containing the Shopify order numbers (e.g. `1001`, `1002`).
 
@@ -100,7 +103,7 @@ The script looks for a column named **`OrderId`** in each sheet containing the S
 ## How It Works — Step by Step
 
 ```
-Excel Files  →  Read OrderIds  →  Find Order (GraphQL)  →  Mark as Paid (GraphQL)
+Web UI / Excel Files  →  Read OrderIds  →  Find Order (GraphQL)  →  Mark as Paid (GraphQL)
 ```
 
 ### Step 1 — Authentication
@@ -166,7 +169,19 @@ The order is instantly updated to **PAID** in Shopify.
 
 ## Usage
 
-### 1. Test a Single Order Number
+### 1. Web Interface (Recommended)
+
+Run the Flask web server to use the interactive dashboard:
+
+```bash
+python app.py
+```
+
+Open `http://localhost:8080` in your browser. Drag and drop your `.xlsx` invoice files, click "Process", and watch the real-time logs stream in.
+
+---
+
+### 2. CLI — Test a Single Order Number
 
 Verify your credentials and setup work before running in bulk:
 
@@ -187,7 +202,7 @@ Result: success
 
 ---
 
-### 2. Test a Specific Excel File
+### 3. CLI — Test a Specific Excel File
 
 Process just one invoice file to verify before running all:
 
@@ -213,7 +228,7 @@ Processing order #1002 ...
 
 ---
 
-### 3. Process All Files (Full Batch Run)
+### 4. CLI — Process All Files (Full Batch Run)
 
 Mark all orders from all invoice files in the `orders/` folder:
 
@@ -245,6 +260,7 @@ TOTAL SUMMARY
 
 | Command | Description |
 |---|---|
+| `python app.py` | **Start the Web Dashboard** |
 | `python mark_as_paid.py` | Process **all** `.xlsx` files in `orders/` |
 | `python mark_as_paid.py --file "orders\file.xlsx"` | Process a **specific file** |
 | `python mark_as_paid.py --order 1001` | Process a **single order number** |
