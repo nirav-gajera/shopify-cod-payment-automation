@@ -26,6 +26,7 @@ Create a `.env` file at the root:
 SHOPIFY_SHOP=your-shop-subdomain
 SHOPIFY_CLIENT_ID=your_client_id
 SHOPIFY_CLIENT_SECRET=your_client_secret
+API_VERSION=2026-07
 ```
 
 ### 3. Execution
