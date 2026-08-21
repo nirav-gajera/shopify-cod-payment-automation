@@ -58,7 +58,7 @@ shopify-cod-mark-paid/
 
 1. Go to your Shopify Admin → **Settings → Apps and sales channels → Develop apps**
 2. Click **Create an app**, give it a name (e.g. `COD Mark Paid Bot`)
-3. Under **Configuration**, enable API scopes: `read_orders`, `write_orders`
+3. Under **Configuration**, enable API scopes: `read_orders`, `write_orders`, `read_all_orders`
 4. Under **API credentials**, copy your **Client ID** and **Client Secret**
 
 ### Step 2 — Install Dependencies
@@ -295,7 +295,7 @@ TOTAL SUMMARY
 
 - [Shopify GraphQL — `orderMarkAsPaid` mutation](https://shopify.dev/docs/api/admin-graphql/2026-04/mutations/orderMarkAsPaid)
 - [Shopify GraphQL — `orders` query](https://shopify.dev/docs/api/admin-graphql/2026-04/queries/orders)
-- [Shopify Custom Apps guide](https://help.shopify.com/en/manual/apps/app-types/custom-apps)
+- [Shopify Custom Apps guide](https://help.shopify.com/en/manual/apps/about-apps#custom-apps)
 
 ---
 

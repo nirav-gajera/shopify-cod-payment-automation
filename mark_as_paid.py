@@ -15,7 +15,6 @@ CLIENT_SECRET = os.getenv("SHOPIFY_CLIENT_SECRET")
 GRAPHQL_URL = f"https://{SHOP}.myshopify.com/admin/api/2026-04/graphql.json"
 ORDERS_DIR = os.path.join(os.path.dirname(__file__), "orders")
 
-
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 def get_access_token():
@@ -31,7 +30,6 @@ def get_access_token():
     )
     resp.raise_for_status()
     return resp.json()["access_token"]
-
 
 # ── Read order numbers from all xlsx files ────────────────────────────────────
 
@@ -75,7 +73,6 @@ def collect_order_numbers() -> list:
 
     print(f"Total unique order numbers collected: {len(unique)}")
     return unique
-
 
 # ── GraphQL helpers ───────────────────────────────────────────────────────────
 
@@ -133,7 +130,6 @@ def find_order_id(token, order_number):
 
 def mark_as_paid(token, order_gid):
     return gql(token, MARK_AS_PAID_MUTATION, {"input": {"id": order_gid}})
-
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 

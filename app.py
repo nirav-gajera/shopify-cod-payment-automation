@@ -26,13 +26,10 @@ _sessions_lock = threading.Lock()
 UPLOAD_DIR = os.path.join(BASE_DIR, "_uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-
 # ── Pages ─────────────────────────────────────────────────────────────────────
-
 @app.route("/")
 def index():
     return render_template("index.html")
-
 
 # ── Upload: parse xlsx files, return preview JSON list ────────────────────────
 
@@ -119,7 +116,6 @@ def upload():
 
     return jsonify(results)
 
-
 # ── Remove: delete a file session from cache ─────────────────────────────────
 
 @app.route("/api/remove", methods=["POST"])
@@ -131,7 +127,6 @@ def remove_session():
             del _sessions[session_id]
             return jsonify({"ok": True})
     return jsonify({"error": "Session not found"}), 404
-
 
 # ── Process: start background thread ─────────────────────────────────────────
 
@@ -212,7 +207,6 @@ def process():
     threading.Thread(target=run, daemon=True).start()
     return jsonify({"ok": True})
 
-
 # ── Stream: SSE endpoint ──────────────────────────────────────────────────────
 
 @app.route("/api/stream/<session_id>")
@@ -252,7 +246,6 @@ def stream(session_id):
             "Connection": "keep-alive",
         },
     )
-
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 
