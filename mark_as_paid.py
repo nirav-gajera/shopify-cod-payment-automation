@@ -104,7 +104,6 @@ mutation OrderMarkAsPaid($input: OrderMarkAsPaidInput!) {
 }
 """
 
-
 def gql(token, query, variables):
     resp = requests.post(
         GRAPHQL_URL,
@@ -117,7 +116,6 @@ def gql(token, query, variables):
     resp.raise_for_status()
     return resp.json()
 
-
 def find_order_id(token, order_number):
     """Returns (gid, financial_status) or (None, None) if not found."""
     data = gql(token, FIND_ORDER_QUERY, {"query": f"name:#{order_number}"})
@@ -126,7 +124,6 @@ def find_order_id(token, order_number):
         return None, None
     node = nodes[0]
     return node["id"], node.get("displayFinancialStatus")
-
 
 def mark_as_paid(token, order_gid):
     return gql(token, MARK_AS_PAID_MUTATION, {"input": {"id": order_gid}})
@@ -167,7 +164,6 @@ def process_order(token, order_number):
     print(f"  -> Marked as paid! New status: {new_status}")
     return "success"
 
-
 def process_file(token, path):
     """Read all order numbers from one xlsx and mark them as paid."""
     print(f"\nFile: {os.path.basename(path)}")
@@ -203,7 +199,6 @@ def process_file(token, path):
     print(f"\n  Summary -> Paid: {results['success']}  Already paid: {results['already_paid']}  "
           f"Not found: {results['not_found']}  Errors: {results['error']}")
     return results
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -255,7 +250,6 @@ def main():
         print(f"  Already paid : {totals['already_paid']}")
         print(f"  Not found    : {totals['not_found']}")
         print(f"  Errors       : {totals['error']}")
-
 
 if __name__ == "__main__":
     main()
