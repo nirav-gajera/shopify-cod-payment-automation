@@ -15,7 +15,6 @@ CLIENT_SECRET = os.getenv("SHOPIFY_CLIENT_SECRET")
 GRAPHQL_URL = f"https://{SHOP}.myshopify.com/admin/api/2026-04/graphql.json"
 ORDERS_DIR = os.path.join(os.path.dirname(__file__), "orders")
 
-
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 def get_access_token():
@@ -31,7 +30,6 @@ def get_access_token():
     )
     resp.raise_for_status()
     return resp.json()["access_token"]
-
 
 # ── Read order numbers from all xlsx files ────────────────────────────────────
 
@@ -76,7 +74,6 @@ def collect_order_numbers() -> list:
     print(f"Total unique order numbers collected: {len(unique)}")
     return unique
 
-
 # ── GraphQL helpers ───────────────────────────────────────────────────────────
 
 FIND_ORDER_QUERY = """
@@ -107,7 +104,6 @@ mutation OrderMarkAsPaid($input: OrderMarkAsPaidInput!) {
 }
 """
 
-
 def gql(token, query, variables):
     resp = requests.post(
         GRAPHQL_URL,
@@ -120,7 +116,6 @@ def gql(token, query, variables):
     resp.raise_for_status()
     return resp.json()
 
-
 def find_order_id(token, order_number):
     """Returns (gid, financial_status) or (None, None) if not found."""
     data = gql(token, FIND_ORDER_QUERY, {"query": f"name:#{order_number}"})
@@ -130,10 +125,8 @@ def find_order_id(token, order_number):
     node = nodes[0]
     return node["id"], node.get("displayFinancialStatus")
 
-
 def mark_as_paid(token, order_gid):
     return gql(token, MARK_AS_PAID_MUTATION, {"input": {"id": order_gid}})
-
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -171,7 +164,6 @@ def process_order(token, order_number):
     print(f"  -> Marked as paid! New status: {new_status}")
     return "success"
 
-
 def process_file(token, path):
     """Read all order numbers from one xlsx and mark them as paid."""
     print(f"\nFile: {os.path.basename(path)}")
@@ -207,7 +199,6 @@ def process_file(token, path):
     print(f"\n  Summary -> Paid: {results['success']}  Already paid: {results['already_paid']}  "
           f"Not found: {results['not_found']}  Errors: {results['error']}")
     return results
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -259,7 +250,6 @@ def main():
         print(f"  Already paid : {totals['already_paid']}")
         print(f"  Not found    : {totals['not_found']}")
         print(f"  Errors       : {totals['error']}")
-
 
 if __name__ == "__main__":
     main()
