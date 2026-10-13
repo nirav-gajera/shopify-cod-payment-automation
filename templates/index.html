@@ -388,7 +388,8 @@
   }
 
   // ── Process ─────────────────────────────────────────────────────────────
-  let globalTotals = { success: 0, already_paid: 0, not_found: 0, error: 0 };
+  let globalTotals   = { success: 0, already_paid: 0, not_found: 0, error: 0 };
+  let liveFileTotals = { success: 0, already_paid: 0, not_found: 0, error: 0 };
 
   $('btn-process').addEventListener('click', async () => {
     if (!uploadedFiles.length) return;
@@ -401,7 +402,8 @@
     $('pulse').classList.remove('hidden');
     setStatus('Processing', 'b-processing');
 
-    globalTotals = { success: 0, already_paid: 0, not_found: 0, error: 0 };
+    globalTotals   = { success: 0, already_paid: 0, not_found: 0, error: 0 };
+    liveFileTotals = { success: 0, already_paid: 0, not_found: 0, error: 0 };
     updateSummaryUI();
 
     for (let i = 0; i < uploadedFiles.length; i++) {
@@ -452,11 +454,21 @@
         if (msg.type === 'ping')      return;
         if (msg.type === 'log')       appendLog(msg.level, msg.message);
         if (msg.type === 'separator') appendSep();
+        if (msg.type === 'counts') {
+          // Real-time incremental update per order
+          liveFileTotals.success     = msg.success;
+          liveFileTotals.already_paid = msg.already_paid;
+          liveFileTotals.not_found   = msg.not_found;
+          liveFileTotals.error       = msg.error;
+          updateSummaryUI();
+        }
         if (msg.type === 'summary') {
-          globalTotals.success += msg.success;
+          // Final totals for the file — accumulate into globalTotals
+          globalTotals.success     += msg.success;
           globalTotals.already_paid += msg.already_paid;
-          globalTotals.not_found += msg.not_found;
-          globalTotals.error += msg.error;
+          globalTotals.not_found   += msg.not_found;
+          globalTotals.error       += msg.error;
+          liveFileTotals = { success: 0, already_paid: 0, not_found: 0, error: 0 };
           updateSummaryUI();
         }
         if (msg.type === 'error')     appendLog('error', msg.message);
@@ -474,10 +486,16 @@
   }
 
   function updateSummaryUI() {
-    $('s-paid').textContent   = globalTotals.success;
-    $('s-already').textContent = globalTotals.already_paid;
-    $('s-nf').textContent      = globalTotals.not_found;
-    $('s-err').textContent     = globalTotals.error;
+    const s = {
+      success:     globalTotals.success     + liveFileTotals.success,
+      already_paid: globalTotals.already_paid + liveFileTotals.already_paid,
+      not_found:   globalTotals.not_found   + liveFileTotals.not_found,
+      error:       globalTotals.error       + liveFileTotals.error,
+    };
+    $('s-paid').textContent    = s.success;
+    $('s-already').textContent = s.already_paid;
+    $('s-nf').textContent      = s.not_found;
+    $('s-err').textContent     = s.error;
     $('summary-bar').classList.add('show');
   }
 
