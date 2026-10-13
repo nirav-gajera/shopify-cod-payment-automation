@@ -170,11 +170,13 @@ def process():
                     if gid is None:
                         emit("log", level="warning", message="  Not found in Shopify")
                         totals["not_found"] += 1
+                        emit("counts", **totals)
                         continue
 
                     if status == "PAID":
                         emit("log", level="muted", message="  Already PAID — skipped")
                         totals["already_paid"] += 1
+                        emit("counts", **totals)
                         continue
 
                     resp = shopify_mark_paid(token, gid)
@@ -188,13 +190,16 @@ def process():
                         msgs = "; ".join(e["message"] for e in errors)
                         emit("log", level="error", message=f"  Error: {msgs}")
                         totals["error"] += 1
+                        emit("counts", **totals)
                     else:
                         emit("log", level="success", message="  Marked as PAID")
                         totals["success"] += 1
+                        emit("counts", **totals)
 
                 except Exception as exc:
                     emit("log", level="error", message=f"  Exception: {exc}")
                     totals["error"] += 1
+                    emit("counts", **totals)
 
             emit("separator")
             emit("summary", **totals)
